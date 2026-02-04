@@ -4,11 +4,13 @@ import romanticAnimation from "../public/TekValen.json"; // adjust path as neede
 
 const FORMSPREE_URL = "https://formspree.io/f/mdskdpjyg";
 
+type Vector2 = { x: number; y: number };
+
 const PostaComponent = () => {
   const [isOpened, setIsOpened] = useState(false);
   const [sent, setSent] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [noPosition, setNoPosition] = useState({ x: 0, y: 0 });
+  const [noPosition, setNoPosition] = useState<Vector2>({ x: 0, y: 0 });
 
   const moveNoButton = () => {
     const randomX = (Math.random() - 0.5) * 220;
@@ -136,7 +138,7 @@ const PostaComponent = () => {
                 ) : (
                   <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
                     <button
-                      onClick={(e) => {
+                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                         e.stopPropagation();
                         handleYes();
                       }}
@@ -154,7 +156,7 @@ const PostaComponent = () => {
 
                     <button
                       onMouseEnter={moveNoButton}
-                      onClick={(e) => {
+                      onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                         e.stopPropagation();
                         moveNoButton();
                       }}
