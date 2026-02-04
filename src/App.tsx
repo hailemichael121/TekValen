@@ -28,8 +28,11 @@ const floatingHearts = Array.from({ length: 8 }, (_, index) => ({
   delay: `${index * 0.6}s`,
 }));
 
+type Stage = "closed" | "opening" | "open" | "reading" | "accepted";
+type Vector2 = { x: number; y: number };
+
 const App = () => {
-  const [stage, setStage] = useState("closed"); // closed → opening → open → reading → accepted
+  const [stage, setStage] = useState<Stage>("closed"); // closed → opening → open → reading → accepted
   const [answer, setAnswer] = useState("");
   const [yesScale, setYesScale] = useState(1);
   const [note, setNote] = useState("");
@@ -37,21 +40,23 @@ const App = () => {
   const [sent, setSent] = useState(false);
   const [pleaIndex, setPleaIndex] = useState(0);
   const [noLabelIndex, setNoLabelIndex] = useState(0);
-  const [noPosition, setNoPosition] = useState({ x: 0, y: 0 });
+  const [noPosition, setNoPosition] = useState<Vector2>({ x: 0, y: 0 });
   const [confettiActive, setConfettiActive] = useState(false);
-  const [confettiOrigin, setConfettiOrigin] = useState({ x: 0, y: 0 });
-  const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
-  const [catOffset, setCatOffset] = useState({ x: 0, y: 0 });
-  const [letterScroll, setLetterScroll] = useState(0);
+  const [confettiOrigin, setConfettiOrigin] = useState<Vector2>({
+    x: 0,
+    y: 0,
+  });
+  const [cursorPos, setCursorPos] = useState<Vector2>({ x: 0, y: 0 });
+  const [catOffset, setCatOffset] = useState<Vector2>({ x: 0, y: 0 });
   const [isScrolling, setIsScrolling] = useState(false);
 
-  const containerRef = useRef(null);
-  const noButtonRef = useRef(null);
-  const yesButtonRef = useRef(null);
-  const threeCanvasRef = useRef(null);
-  const letterRef = useRef(null);
-  const postaRef = useRef(null);
-  const letterContentRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const noButtonRef = useRef<HTMLButtonElement | null>(null);
+  const yesButtonRef = useRef<HTMLButtonElement | null>(null);
+  const threeCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const letterRef = useRef<HTMLDivElement | null>(null);
+  const postaRef = useRef<HTMLDivElement | null>(null);
+  const letterContentRef = useRef<HTMLDivElement | null>(null);
 
   const pleaMessage = useMemo(() => pleadingLines[pleaIndex], [pleaIndex]);
   const noButtonLabels = useMemo(
@@ -98,7 +103,7 @@ const App = () => {
     setNoPosition({ x: randomX, y: randomY });
   };
 
-  const trackCursor = (event) => {
+  const trackCursor = (event: React.MouseEvent<HTMLDivElement>) => {
     const container = containerRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
@@ -200,15 +205,11 @@ const App = () => {
       setStage("accepted");
     }
   };
-  const handleLetterScroll = (e) => {
-    const content = letterContentRef.current;
-    if (!content) return;
-
-    const scrollTop = e.target.scrollTop;
+  const handleLetterScroll = (content: HTMLDivElement) => {
+    const scrollTop = content.scrollTop;
     const maxScroll = content.scrollHeight - content.clientHeight;
     const scrollPercent = (scrollTop / maxScroll) * 100;
 
-    setLetterScroll(scrollPercent);
     setIsScrolling(scrollTop > 10);
 
     // Transition to "reading" stage when user starts scrolling
@@ -218,21 +219,20 @@ const App = () => {
   };
 
   useEffect(() => {
-    const handleScroll = (e) => {
-      if (stage === "reading" && letterRef.current) {
-        handleLetterScroll(e);
+    const letterContent = letterContentRef.current;
+    if (!letterContent) return;
+    const handleScroll = (event: Event) => {
+      if (stage === "reading") {
+        const target = event.target as HTMLDivElement | null;
+        if (target) {
+          handleLetterScroll(target);
+        }
       }
     };
-
-    const letterContent = letterContentRef.current;
-    if (letterContent) {
-      letterContent.addEventListener("scroll", handleScroll);
-    }
+    letterContent.addEventListener("scroll", handleScroll);
 
     return () => {
-      if (letterContent) {
-        letterContent.removeEventListener("scroll", handleScroll);
-      }
+      letterContent.removeEventListener("scroll", handleScroll);
     };
   }, [stage]);
 
@@ -503,7 +503,7 @@ const App = () => {
             <div
               ref={letterContentRef}
               className="letter-content h-full overflow-y-auto"
-              onScroll={handleLetterScroll}
+              onScroll={(event) => handleLetterScroll(event.currentTarget)}
             >
               {stage !== "accepted" ? (
                 <div
