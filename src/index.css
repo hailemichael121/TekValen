@@ -64,21 +64,22 @@ body {
 }
 
 .letter-open {
-  opacity: 1;
-  transform: translate(-50%, 0);
-  bottom: 180px;
+  opacity: 1 !important;
+  transform: translate(-50%, 0) !important;
+  bottom: 180px !important;
+  pointer-events: auto !important;
 }
 
 @media (max-width: 768px) {
   .letter-open {
-    bottom: 150px;
+    bottom: 150px !important;
   }
 }
 
 .letter-closed {
-  opacity: 0;
-  transform: translate(-50%, 100px);
-  pointer-events: none;
+  opacity: 0 !important;
+  transform: translate(-50%, 100px) !important;
+  pointer-events: none !important;
 }
 
 .letter-scrolling {

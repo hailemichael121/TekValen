@@ -195,13 +195,11 @@ const App = () => {
       setStage("opening");
       setTimeout(() => {
         setStage("open");
-        setTimeout(() => setStage("reading"), 300);
       }, 800);
     } else if (sent && stage !== "accepted") {
       setStage("accepted");
     }
   };
-
   const handleLetterScroll = (e) => {
     const content = letterContentRef.current;
     if (!content) return;
@@ -212,6 +210,11 @@ const App = () => {
 
     setLetterScroll(scrollPercent);
     setIsScrolling(scrollTop > 10);
+
+    // Transition to "reading" stage when user starts scrolling
+    if (scrollTop > 10 && stage === "open") {
+      setStage("reading");
+    }
   };
 
   useEffect(() => {
@@ -459,24 +462,20 @@ const App = () => {
         <div
           ref={letterRef}
           className={`
-            fixed bottom-0 left-1/2 transform -translate-x-1/2 z-20
-            transition-all duration-1000 ease-out
-            ${stage === "closed" ? "letter-closed" : "letter-open"}
-            ${isScrolling ? "letter-scrolling" : ""}
-          `}
-          style={{
-            bottom: `${Math.max(40, Math.min(120, letterScroll * 1.2))}px`,
-            transition: isScrolling ? "none" : "all 0.3s ease-out",
-          }}
+    fixed bottom-0 left-1/2 -translate-x-1/2 z-20
+    transition-all duration-1000 ease-out
+    ${stage === "closed" ? "letter-closed" : ""}
+    ${stage === "open" || stage === "reading" ? "letter-open" : ""}
+    ${isScrolling ? "letter-scrolling" : ""}
+  `}
         >
           <div
             className={`
-              glass-letter curvy-letter letter-container
-              w-[95vw] max-w-4xl md:max-w-5xl xl:max-w-6xl
-              transition-all duration-700
-              ${stage === "reading" ? "h-[85vh] max-h-[700px]" : "h-[70vh] max-h-[600px]"}
-              ${stage === "open" ? "opacity-100" : "opacity-0"}
-            `}
+      glass-letter curvy-letter letter-container
+      w-[95vw] max-w-4xl md:max-w-5xl xl:max-w-6xl
+      ${stage === "reading" ? "h-[85vh] max-h-[720px]" : "h-[70vh] max-h-[620px]"}
+      ${stage === "open" || stage === "reading" ? "opacity-100" : "opacity-0"}
+    `}
           >
             {/* Letter scroll indicator */}
             <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-30">
