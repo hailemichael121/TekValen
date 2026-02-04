@@ -4,8 +4,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ["\"Cinzel\"", "serif"],
-        sans: ["\"Inter\"", "system-ui", "sans-serif"],
+        display: ['"Cinzel"', "serif"],
+        sans: ['"Inter"', "system-ui", "sans-serif"],
       },
       boxShadow: {
         glass: "0 20px 60px rgba(0,0,0,0.2)",
@@ -16,6 +16,7 @@ export default {
       colors: {
         pearl: "#f5f5f5",
         ink: "#0d0d0d",
+        valentine: "#c48b9a",
       },
     },
   },
