@@ -7,7 +7,7 @@
 }
 
 body {
-  @apply bg-ink text-white font-sans;
+  @apply bg-ink text-white font-sans overflow-x-hidden;
 }
 
 .three-canvas {
@@ -15,11 +15,159 @@ body {
   z-index: 0;
 }
 
-.glass-panel {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(18px);
+/* Glass letter with realistic paper look */
+.glass-letter {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 250, 245, 0.98) 0%,
+    rgba(255, 250, 245, 0.95) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 2px solid rgba(255, 182, 193, 0.3);
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.1),
+    0 0 60px rgba(255, 182, 193, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.glass-letter::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  padding: 3px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 182, 193, 0.6),
+    rgba(255, 105, 180, 0.8),
+    rgba(255, 182, 193, 0.6)
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.curvy-letter {
+  border-radius: 24px !important;
+}
+
+.letter-container {
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: height, bottom;
+}
+
+.letter-open {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  bottom: 180px;
+}
+
+@media (max-width: 768px) {
+  .letter-open {
+    bottom: 150px;
+  }
+}
+
+.letter-closed {
+  opacity: 0;
+  transform: translate(-50%, 100px);
+  pointer-events: none;
+}
+
+.letter-scrolling {
+  transform: translate(-50%, 0) scale(0.98);
+}
+
+/* Paper texture for letter content */
+.letter-content {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 29px,
+    rgba(0, 0, 0, 0.05) 29px,
+    rgba(0, 0, 0, 0.05) 30px
+  );
+  padding-right: 16px;
+}
+
+/* Custom scrollbar for realistic feel */
+.letter-content::-webkit-scrollbar {
+  width: 12px;
+}
+
+.letter-content::-webkit-scrollbar-track {
+  background: rgba(255, 182, 193, 0.1);
+  border-radius: 10px;
+  margin: 20px;
+}
+
+.letter-content::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 182, 193, 0.8),
+    rgba(255, 105, 180, 0.8)
+  );
+  border-radius: 10px;
+  border: 3px solid rgba(255, 182, 193, 0.3);
+}
+
+.letter-content::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 182, 193, 1),
+    rgba(255, 105, 180, 1)
+  );
+}
+
+/* Letter top part that peeks out initially */
+.letter-top {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 250, 245, 1) 0%,
+    rgba(255, 250, 245, 0) 100%
+  );
+  padding-bottom: 40px;
+  margin-bottom: -40px;
+}
+
+/* Real paper effect for handwritten note */
+.paper-letter {
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.05),
+      rgba(0, 0, 0, 0.05) 1px,
+      transparent 1px,
+      transparent 24px
+    ),
+    radial-gradient(circle at 50% 0, rgba(0, 0, 0, 0.02), transparent 50%);
+  background-size:
+    100% 24px,
+    100% 100%;
+  position: relative;
+  font-family: "Georgia", serif;
+}
+
+.paper-letter::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 40px;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 0, 0, 0.1),
+    transparent
+  );
 }
 
 .sparkle {
@@ -29,21 +177,6 @@ body {
 .floating-emoji {
   animation: drift 8s ease-in-out infinite;
   opacity: 0.7;
-}
-
-.paper-letter {
-  background-image:
-    repeating-linear-gradient(
-      to bottom,
-      rgba(32, 32, 32, 0.08),
-      rgba(32, 32, 32, 0.08) 1px,
-      transparent 1px,
-      transparent 22px
-    ),
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.65), transparent 55%);
-  background-size:
-    100% 22px,
-    100% 100%;
 }
 
 .confetti-piece {
@@ -108,79 +241,86 @@ body {
   animation: pulse-ring 2.8s infinite;
 }
 
-.paper-panel {
-  transform-origin: bottom center;
+/* Envelope flap animations */
+.rotate-x-180 {
+  transform: rotateX(180deg);
 }
 
-.paper-open {
-  animation: paper-slide 0.9s ease-out both;
+.rotate-x-0 {
+  transform: rotateX(0deg);
 }
 
-.paper-jet {
-  animation: paper-jet 1.3s ease-in forwards;
-}
-
-.cat-happy {
-  animation: cat-bounce 0.9s ease-in-out infinite;
-}
-
-.card-floor {
-  background: radial-gradient(
-    ellipse at center,
-    rgba(255, 230, 238, 0.32),
-    rgba(14, 14, 14, 0.05) 55%,
-    transparent 70%
-  );
-  filter: blur(8px);
-}
-
-@keyframes paper-slide {
-  0% {
-    opacity: 0;
-    transform: translateY(40px) scale(0.96);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes paper-jet {
-  0% {
-    opacity: 1;
-    transform: translateY(0) rotate(0deg) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(220px, -420px) rotate(18deg) scale(0.7);
-  }
-}
-
-.envelope {
-  perspective: 1200px;
-}
-
-.envelope-flap {
-  background: linear-gradient(
-    160deg,
-    rgba(255, 255, 255, 0.18),
-    rgba(255, 255, 255, 0)
-  );
-  clip-path: polygon(0 0, 100% 0, 50% 100%);
-  transform-origin: top center;
-  transition: transform 0.6s ease;
-}
-
-.envelope:hover .envelope-flap {
-  transform: rotateX(25deg);
-}
-
-@keyframes cat-bounce {
+@keyframes seal-pulse {
   0%,
   100% {
-    transform: translateY(0);
+    transform: scale(1);
+    opacity: 0.9;
   }
   50% {
-    transform: translateY(-6px);
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+.sealed-stamp {
+  animation: seal-pulse 2s infinite;
+}
+
+/* Scroll indicator animation */
+.scroll-indicator {
+  animation: fade-in-up 0.5s ease-out;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .glass-letter {
+    border-radius: 20px !important;
+    padding: 1rem !important;
+  }
+
+  .curvy-letter::before {
+    border-radius: 20px;
+    padding: 2px;
+  }
+
+  .letter-content::-webkit-scrollbar {
+    width: 8px;
+  }
+}
+
+@media (max-width: 640px) {
+  .grid-cols-\[1\.1fr_0\.9fr\] {
+    grid-template-columns: 1fr;
+  }
+
+  .glass-letter {
+    max-height: 75vh;
+  }
+}
+
+/* Smooth scrolling behavior */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Hide scrollbar on mobile when not scrolling */
+@media (hover: none) and (pointer: coarse) {
+  .letter-content::-webkit-scrollbar {
+    display: none;
+  }
+
+  .letter-content {
+    -webkit-overflow-scrolling: touch;
   }
 }

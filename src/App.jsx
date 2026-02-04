@@ -2,14 +2,15 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import Lottie from "lottie-react";
 import romanticAnimation from "../public/TekValen.json";
+import { DotLottiePlayer } from "@dotlottie/react-player";
 
-const FORMSPREE_URL = "https://formspree.io/f/mdkdwpjyg";
+const FORMSPREE_URL = "https://formspree.io/f/mdskdpjyg";
 
 const pleadingLines = [
-  "Shefafite, I’ll wait with the softest patience.",
+  "Shefafite, I'll wait with the softest patience.",
   "Tekta, your yes would light up my quiet nights.",
   "May I try again? I want to be your calm and joy.",
-  "Still no? I’ll keep showing up with kindness.",
+  "Still no? I'll keep showing up with kindness.",
 ];
 
 const floatingStars = Array.from({ length: 12 }, (_, index) => ({
@@ -28,8 +29,7 @@ const floatingHearts = Array.from({ length: 8 }, (_, index) => ({
 }));
 
 const App = () => {
-  const [isOpened, setIsOpened] = useState(false);
-  const [isJet, setIsJet] = useState(false);
+  const [stage, setStage] = useState("closed"); // closed → opening → open → reading → accepted
   const [answer, setAnswer] = useState("");
   const [yesScale, setYesScale] = useState(1);
   const [note, setNote] = useState("");
@@ -42,16 +42,22 @@ const App = () => {
   const [confettiOrigin, setConfettiOrigin] = useState({ x: 0, y: 0 });
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
   const [catOffset, setCatOffset] = useState({ x: 0, y: 0 });
+  const [letterScroll, setLetterScroll] = useState(0);
+  const [isScrolling, setIsScrolling] = useState(false);
+
   const containerRef = useRef(null);
   const noButtonRef = useRef(null);
   const yesButtonRef = useRef(null);
   const threeCanvasRef = useRef(null);
+  const letterRef = useRef(null);
+  const postaRef = useRef(null);
+  const letterContentRef = useRef(null);
 
   const pleaMessage = useMemo(() => pleadingLines[pleaIndex], [pleaIndex]);
   const noButtonLabels = useMemo(
     () => [
       "Please, Tekta?",
-      "Don’t say no…",
+      "Don't say no…",
       "Softly, yes?",
       "Give me a chance",
       "Shefafite asks 🥺",
@@ -62,10 +68,10 @@ const App = () => {
   const moveNoButton = () => {
     const container = containerRef.current;
     const button = noButtonRef.current;
-    if (!container) return;
+    if (!container || !button) return;
     const { width, height } = container.getBoundingClientRect();
-    const buttonWidth = button?.offsetWidth ?? 120;
-    const buttonHeight = button?.offsetHeight ?? 48;
+    const buttonWidth = button.offsetWidth || 120;
+    const buttonHeight = button.offsetHeight || 48;
     const padding = 24;
     const minX = -width / 2 + buttonWidth / 2 + padding;
     const maxX = width / 2 - buttonWidth / 2 - padding;
@@ -147,7 +153,7 @@ const App = () => {
     setYesScale(1.32);
     setIsSending(true);
     setConfettiActive(true);
-    setTimeout(() => setIsJet(true), 1300);
+
     const container = containerRef.current;
     const yesButton = yesButtonRef.current;
     if (container && yesButton) {
@@ -157,6 +163,7 @@ const App = () => {
         y: buttonRect.top + buttonRect.height / 2,
       });
     }
+
     try {
       const response = await fetch(FORMSPREE_URL, {
         method: "POST",
@@ -174,6 +181,7 @@ const App = () => {
         throw new Error("Formspree submission failed.");
       }
       setSent(true);
+      setStage("accepted");
     } catch (error) {
       console.error(error);
     } finally {
@@ -181,6 +189,49 @@ const App = () => {
       setTimeout(() => setConfettiActive(false), 2800);
     }
   };
+
+  const handleOpen = () => {
+    if (stage === "closed" && !sent) {
+      setStage("opening");
+      setTimeout(() => {
+        setStage("open");
+        setTimeout(() => setStage("reading"), 300);
+      }, 800);
+    } else if (sent && stage !== "accepted") {
+      setStage("accepted");
+    }
+  };
+
+  const handleLetterScroll = (e) => {
+    const content = letterContentRef.current;
+    if (!content) return;
+
+    const scrollTop = e.target.scrollTop;
+    const maxScroll = content.scrollHeight - content.clientHeight;
+    const scrollPercent = (scrollTop / maxScroll) * 100;
+
+    setLetterScroll(scrollPercent);
+    setIsScrolling(scrollTop > 10);
+  };
+
+  useEffect(() => {
+    const handleScroll = (e) => {
+      if (stage === "reading" && letterRef.current) {
+        handleLetterScroll(e);
+      }
+    };
+
+    const letterContent = letterContentRef.current;
+    if (letterContent) {
+      letterContent.addEventListener("scroll", handleScroll);
+    }
+
+    return () => {
+      if (letterContent) {
+        letterContent.removeEventListener("scroll", handleScroll);
+      }
+    };
+  }, [stage]);
 
   useEffect(() => {
     const canvas = threeCanvasRef.current;
@@ -255,6 +306,7 @@ const App = () => {
       <canvas ref={threeCanvasRef} className="three-canvas absolute inset-0" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,214,226,0.12),_transparent_55%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,_rgba(187,166,206,0.12),_transparent_60%)]" />
+
       <div className="absolute inset-0 pointer-events-none">
         {floatingStars.map((star) => (
           <span
@@ -283,6 +335,7 @@ const App = () => {
           </span>
         ))}
       </div>
+
       {confettiActive && (
         <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden">
           {Array.from({ length: 64 }, (_, index) => {
@@ -319,228 +372,340 @@ const App = () => {
           })}
         </div>
       )}
-      <div className="pointer-events-none absolute inset-x-0 bottom-6 flex justify-center">
-        <div className="card-floor h-10 w-[75%] max-w-3xl rounded-[50%]" />
-      </div>
 
-      <main className="relative z-10 flex min-h-screen items-center justify-center px-6 py-16">
+      <main className="relative z-10 flex min-h-screen items-end justify-center px-4 pb-4 md:px-6 md:pb-6">
+        {/* === POSTA / ENVELOPE (Wide at bottom) === */}
         <div
-          ref={containerRef}
-          className={`glass-panel paper-panel w-full max-w-4xl rounded-[36px] p-10 md:p-14 ${
-            isJet ? "paper-jet" : "paper-open"
-          }`}
+          ref={postaRef}
+          className={`
+            fixed bottom-0 left-0 right-0 w-full
+            flex items-end justify-center
+            transition-all duration-1000 ease-out z-30
+            ${stage === "closed" ? "opacity-100" : "opacity-90"}
+          `}
         >
-          {!isOpened ? (
-            <div className="flex min-h-[420px] items-center justify-center">
-              <button
-                type="button"
-                onClick={() => setIsOpened(true)}
-                className="envelope group relative flex h-52 w-80 items-center justify-center rounded-[28px] border border-white/30 bg-white/10 text-white shadow-[0_30px_70px_rgba(0,0,0,0.4)] transition duration-500 hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-white/30"
+          <div
+            className={`
+              relative w-full max-w-5xl xl:max-w-6xl
+              cursor-pointer transition-all duration-700
+              ${stage === "closed" ? "translate-y-0" : "translate-y-4"}
+            `}
+            onClick={
+              stage === "closed" || (sent && stage !== "accepted")
+                ? handleOpen
+                : undefined
+            }
+          >
+            {/* Envelope body - Very wide */}
+            <div
+              className={`
+                relative w-full aspect-[5/1.8] md:aspect-[5/1.5] xl:aspect-[5/1.3]
+                bg-gradient-to-br from-rose-800/90 via-red-800/90 to-purple-900/90
+                rounded-t-3xl md:rounded-t-4xl
+                shadow-2xl shadow-black/60
+                border-t-2 border-x-2 border-rose-400/40
+                overflow-hidden
+              `}
+            >
+              {/* Bottom part of envelope (pocket) */}
+              <div className="absolute bottom-0 left-0 right-0 h-3/4 bg-gradient-to-t from-red-900/90 to-pink-800/90" />
+
+              {/* Flap - opens upward */}
+              <div
+                className={`
+                  absolute top-0 left-0 right-0 h-[55%] origin-top
+                  bg-gradient-to-b from-rose-700 via-red-700 to-pink-600
+                  transition-transform duration-1000 ease-out
+                  shadow-lg z-20
+                  ${stage !== "closed" ? "rotate-x-[-180deg]" : "rotate-x-0"}
+                `}
+                style={{
+                  clipPath: "polygon(0 0, 100% 0, 50% 100%)",
+                  backfaceVisibility: "hidden",
+                  transformStyle: "preserve-3d",
+                }}
               >
-                <div className="absolute inset-0 rounded-[28px] border border-white/20" />
-                <div className="absolute top-0 h-1/2 w-full rounded-t-[28px] bg-white/10" />
-                <div className="absolute bottom-0 h-1/2 w-full rounded-b-[28px] bg-white/5" />
-                <div className="envelope-flap absolute top-0 h-20 w-full rounded-t-[28px]" />
-                <div className="relative z-10 text-center">
-                  <p className="text-xs uppercase tracking-[0.3em] text-white/60">
-                    Tap to open
-                  </p>
-                  <p className="mt-3 text-lg font-semibold">Sealed for Tekta</p>
-                </div>
-              </button>
-            </div>
-          ) : (
-            <div className="grid gap-10 md:grid-cols-[1.1fr_0.9fr] md:items-center">
-              <section className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl border border-white/30 bg-white/10 p-3">
-                    <svg
-                      className="h-full w-full text-white"
-                      viewBox="0 0 64 64"
-                      fill="none"
-                    >
-                      <path
-                        d="M32 51C32 51 14 39.8 14 27C14 20.6 19.4 15 26 15C29.7 15 33 16.8 35.2 19.8C37.3 16.8 40.6 15 44.4 15C51 15 56.4 20.6 56.4 27C56.4 39.8 38.2 51 38.2 51H32Z"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                      />
-                      <circle cx="22" cy="30" r="2" fill="currentColor" />
-                      <circle cx="43" cy="30" r="2" fill="currentColor" />
-                      <path
-                        d="M26 38C28.5 40.5 35.5 40.5 38 38"
-                        stroke="currentColor"
-                        strokeWidth="2.6"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.4em] text-white/70">
-                      For Tekta
-                    </p>
-                    <h1 className="font-display text-3xl md:text-4xl">
-                      Tekta, will you be my Valentine?
-                    </h1>
+                {/* Inner flap color when opened */}
+                <div
+                  className="absolute inset-0 bg-rose-950/70 rotate-180"
+                  style={{ backfaceVisibility: "hidden" }}
+                />
+              </div>
+
+              {/* Sealed stamp when accepted */}
+              {stage === "accepted" && (
+                <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
+                  <div className="sealed-stamp px-10 py-5 md:px-14 md:py-7 rounded-2xl bg-gradient-to-r from-rose-900/90 to-pink-900/90 backdrop-blur-xl border-4 border-rose-400/60 shadow-2xl">
+                    <span className="text-xl md:text-3xl font-bold text-white tracking-wider">
+                      SEALED WITH LOVE ❤️
+                    </span>
                   </div>
                 </div>
+              )}
 
-                <p className="text-base text-white/70">
-                  Shefafite, lowkey I just want us, soft lights, and a night
-                  that feels like a playlist on repeat. “እኔና አንቺ ብቻ እንኳን ሰላም
-                  ይሁን፤ ልቤ በአንቺ ላይ ይቀመጣል።”
-                </p>
-
-                <div className="rounded-[28px] border-none bg-none p-5">
-                  <Lottie
-                    animationData={romanticAnimation}
-                    loop={true}
-                    className="h-full w-full"
-                  />
-                </div>
-
-                <div className="space-y-4 rounded-[28px] border border-white/20 bg-white/5 p-5">
-                  <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/60">
-                    <span>Handwritten note</span>
-                    <span className="text-lg">🖊️</span>
-                  </div>
-                  <div className="paper-letter mt-3 space-y-3 rounded-2xl border border-white/30 bg-white/90 p-4 text-ink shadow-[0_18px_40px_rgba(0,0,0,0.2)]">
-                    <p className="text-sm font-semibold">To Tekta,</p>
-                    <p className="text-sm leading-relaxed">
-                      ፍቅሬ ሆይ፣ በአንቺ የተሞላ ማታ እመኛለሁ፤ የልቤ ዝምታ ለአንቺ ይዘምራል።
-                    </p>
-                    <p className="text-sm italic">— Shefafite</p>
-                  </div>
-                </div>
-              </section>
-
-              <section className="relative">
-                <div className="flex flex-col items-center gap-6 text-center">
-                  <div className="space-y-2">
-                    <p className="text-lg font-medium">
-                      {answer === "yes"
-                        ? "She said yes. 🤍"
-                        : "Tap a button to answer."}
-                    </p>
-                    <p className="text-sm text-white/60">
-                      {sent
-                        ? "Her response just arrived in your inbox."
-                        : "The “Not” button is shy, but the “Yes” button is bold."}
-                    </p>
-                  </div>
-
-                  <div className="relative flex w-full items-center justify-center gap-6">
-                    <button
-                      type="button"
-                      onClick={handleYes}
-                      ref={yesButtonRef}
-                      style={{ transform: `scale(${yesScale})` }}
-                      className="yes-ring rounded-full border border-white/40 bg-gradient-to-r from-white via-[#f2e6eb] to-white px-10 py-4 text-base font-semibold text-ink transition duration-300 hover:scale-110 hover:rounded-[999px] focus:outline-none focus:ring-4 focus:ring-white/40"
-                    >
-                      {isSending ? "Sending..." : "Yes, always"}
-                    </button>
-
-                    <button
-                      type="button"
-                      onMouseEnter={moveNoButton}
-                      onFocus={moveNoButton}
-                      onClick={handleNoClick}
-                      ref={noButtonRef}
-                      style={{
-                        transform: `translate(${noPosition.x}px, ${noPosition.y}px)`,
-                      }}
-                      className="rounded-full border border-white/30 bg-white/5 px-8 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white/80 transition duration-200"
-                    >
-                      {noButtonLabels[noLabelIndex]}
-                    </button>
-                  </div>
-
-                  <div className="w-full max-w-xs rounded-2xl border border-white/30 bg-white/10 px-4 py-4 text-sm text-white/90 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
-                    <p className="mt-1 text-base text-white/95">
-                      {pleaMessage}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="relative mt-10 flex flex-col items-center">
-                  <div
-                    className="cat-wrap transition-transform duration-300"
-                    style={{
-                      transform: `translate(${catOffset.x}px, ${catOffset.y}px)`,
-                    }}
-                  >
-                    <svg
-                      className={`h-24 w-28 text-white/80 drop-shadow-[0_10px_18px_rgba(0,0,0,0.35)] ${
-                        answer === "yes" ? "cat-happy" : ""
-                      }`}
-                      viewBox="0 0 120 90"
-                      fill="none"
-                    >
-                      <defs>
-                        <linearGradient
-                          id="catGlow"
-                          x1="0"
-                          x2="1"
-                          y1="0"
-                          y2="1"
-                        >
-                          <stop offset="0%" stopColor="#f7f1f4" />
-                          <stop offset="100%" stopColor="#d7cbd6" />
-                        </linearGradient>
-                      </defs>
-                      <path
-                        d="M20 62C20 45 34 34 60 34C86 34 100 45 100 62C100 79 86 88 60 88C34 88 20 79 20 62Z"
-                        fill="url(#catGlow)"
-                        opacity="0.35"
-                      />
-                      <path
-                        d="M30 35L40 10L60 32L80 10L90 35"
-                        stroke="currentColor"
-                        strokeWidth="5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <circle cx="45" cy="55" r="7" fill="currentColor" />
-                      <circle cx="75" cy="55" r="7" fill="currentColor" />
-                      <circle
-                        cx={45 + Math.max(-3, Math.min(3, cursorPos.x / 60))}
-                        cy={55 + Math.max(-2, Math.min(2, cursorPos.y / 80))}
-                        r="3"
-                        fill="#0d0d0d"
-                      />
-                      <circle
-                        cx={75 + Math.max(-3, Math.min(3, cursorPos.x / 60))}
-                        cy={55 + Math.max(-2, Math.min(2, cursorPos.y / 80))}
-                        r="3"
-                        fill="#0d0d0d"
-                      />
-                      <path
-                        d="M52 68C56 71 64 71 68 68"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M38 60H22M98 60H82"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  </div>
-                  <p className="mt-2 text-xs uppercase tracking-[0.3em] text-white/50">
-                    {answer === "yes"
-                      ? "I love you. Thanks for being my Valentine."
-                      : "Her eyes follow the moment"}
+              {/* Hint to open */}
+              {stage === "closed" && (
+                <div className="absolute top-4 md:top-6 left-0 right-0 text-center">
+                  <p className="text-white/60 text-sm md:text-base tracking-wider animate-pulse">
+                    Tap the envelope to open
                   </p>
                 </div>
-              </section>
+              )}
             </div>
-          )}
+          </div>
         </div>
-        {answer === "yes" && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div className="rounded-full border border-white/30 bg-white/10 px-6 py-3 text-sm uppercase tracking-[0.3em] text-white/80 shadow-[0_20px_40px_rgba(0,0,0,0.35)]">
-              Thank you, my Valentine.
+
+        {/* === LETTER - Scrolls out from posta === */}
+        <div
+          ref={letterRef}
+          className={`
+            fixed bottom-0 left-1/2 transform -translate-x-1/2 z-20
+            transition-all duration-1000 ease-out
+            ${stage === "closed" ? "letter-closed" : "letter-open"}
+            ${isScrolling ? "letter-scrolling" : ""}
+          `}
+          style={{
+            bottom: `${Math.max(40, Math.min(120, letterScroll * 1.2))}px`,
+            transition: isScrolling ? "none" : "all 0.3s ease-out",
+          }}
+        >
+          <div
+            className={`
+              glass-letter curvy-letter letter-container
+              w-[95vw] max-w-4xl md:max-w-5xl xl:max-w-6xl
+              transition-all duration-700
+              ${stage === "reading" ? "h-[85vh] max-h-[700px]" : "h-[70vh] max-h-[600px]"}
+              ${stage === "open" ? "opacity-100" : "opacity-0"}
+            `}
+          >
+            {/* Letter scroll indicator */}
+            <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-30">
+              <div className="scroll-indicator flex items-center gap-2 px-4 py-2 bg-black/50 backdrop-blur-sm rounded-full">
+                <svg
+                  className="w-5 h-5 animate-bounce"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                  />
+                </svg>
+                <span className="text-xs font-medium text-white/80">
+                  {isScrolling ? "Scrolling..." : "Scroll to read"}
+                </span>
+              </div>
+            </div>
+
+            {/* Letter content - scrollable */}
+            <div
+              ref={letterContentRef}
+              className="letter-content h-full overflow-y-auto"
+              onScroll={handleLetterScroll}
+            >
+              {stage !== "accepted" ? (
+                <div
+                  ref={containerRef}
+                  className="p-6 md:p-10 lg:p-12 min-h-full flex flex-col"
+                >
+                  {/* Letter top part (peeking out initially) */}
+                  <div
+                    className={`
+                    letter-top transition-opacity duration-500
+                    ${isScrolling ? "opacity-0" : "opacity-100"}
+                  `}
+                  >
+                    <div className="text-center mb-10">
+                      <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-pink-300 via-rose-400 to-pink-300 bg-clip-text text-transparent">
+                        To My Tekta ❤️
+                      </h1>
+                      <p className="text-white/60 mt-4 text-lg">
+                        A Valentine's Day Letter
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Main letter content */}
+                  <div className="space-y-8 flex-1">
+                    <section className="space-y-6">
+                      <div className="flex items-center gap-4">
+                        <div className="h-14 w-14 rounded-2xl border border-white/30 bg-white/10 p-3">
+                          <svg
+                            className="h-full w-full text-white"
+                            viewBox="0 0 64 64"
+                            fill="none"
+                          >
+                            <path
+                              d="M32 51C32 51 14 39.8 14 27C14 20.6 19.4 15 26 15C29.7 15 33 16.8 35.2 19.8C37.3 16.8 40.6 15 44.4 15C51 15 56.4 20.6 56.4 27C56.4 39.8 38.2 51 38.2 51H32Z"
+                              stroke="currentColor"
+                              strokeWidth="3"
+                            />
+                            <circle cx="22" cy="30" r="2" fill="currentColor" />
+                            <circle cx="43" cy="30" r="2" fill="currentColor" />
+                            <path
+                              d="M26 38C28.5 40.5 35.5 40.5 38 38"
+                              stroke="currentColor"
+                              strokeWidth="2.6"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                        </div>
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.4em] text-white/70">
+                            For Tekta
+                          </p>
+                          <h2 className="font-display text-2xl md:text-3xl">
+                            Will you be my Valentine?
+                          </h2>
+                        </div>
+                      </div>
+
+                      <p className="text-lg text-white/80 leading-relaxed">
+                        Shefafite, lowkey I just want us, soft lights, and a
+                        night that feels like a playlist on repeat. "እኔና አንቺ ብቻ
+                        እንኳን ሰላም ይሁን፤ ልቤ በአንቺ ላይ ይቀመጣል።"
+                      </p>
+
+                      <div className="rounded-[28px] border-none bg-none p-1">
+                        <Lottie
+                          animationData={romanticAnimation}
+                          loop={true}
+                          className="h-48 w-full"
+                        />
+                      </div>
+                    </section>
+
+                    {/* Spacer to push content up as you scroll */}
+                    <div className="h-16" />
+
+                    <section className="space-y-6">
+                      <div className="space-y-4 rounded-[28px] border border-white/20 bg-white/5 p-5">
+                        <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-white/60">
+                          <span>Handwritten note</span>
+                          <span className="text-lg">🖊️</span>
+                        </div>
+                        <div className="paper-letter mt-3 space-y-3 rounded-2xl border border-white/30 bg-white/90 p-4 text-ink shadow-[0_18px_40px_rgba(0,0,0,0.2)]">
+                          <p className="text-sm font-semibold">To Tekta,</p>
+                          <p className="text-sm leading-relaxed">
+                            ፍቅሬ ሆይ፣ በአንቺ የተሞላ ማታ እመኛለሁ፤ የልቤ ዝምታ ለአንቺ ይዘምራል።
+                          </p>
+                          <p className="text-sm italic">— Shefafite</p>
+                        </div>
+                      </div>
+                    </section>
+
+                    {/* Spacer to push content up as you scroll */}
+                    <div className="h-16" />
+
+                    {/* Response section (appears as you scroll up) */}
+                    <section className="relative pt-10">
+                      <div className="flex flex-col items-center gap-6 text-center">
+                        <div className="space-y-2">
+                          <p className="text-lg font-medium">
+                            {answer === "yes"
+                              ? "She said yes. 🤍"
+                              : "Your answer awaits..."}
+                          </p>
+                          <p className="text-sm text-white/60">
+                            {sent
+                              ? "Her response just arrived in your inbox."
+                              : "The 'Not' button is shy, but the 'Yes' button is bold."}
+                          </p>
+                        </div>
+
+                        <div className="relative flex w-full items-center justify-center gap-6">
+                          <button
+                            type="button"
+                            onClick={handleYes}
+                            ref={yesButtonRef}
+                            style={{ transform: `scale(${yesScale})` }}
+                            className="yes-ring rounded-full border border-white/40 bg-gradient-to-r from-white via-[#f2e6eb] to-white px-8 py-3 md:px-10 md:py-4 text-sm md:text-base font-semibold text-ink transition duration-300 hover:scale-110 hover:rounded-[999px] focus:outline-none focus:ring-4 focus:ring-white/40"
+                          >
+                            {isSending ? "Sending..." : "Yes, always"}
+                          </button>
+
+                          <button
+                            type="button"
+                            onMouseEnter={moveNoButton}
+                            onFocus={moveNoButton}
+                            onClick={handleNoClick}
+                            ref={noButtonRef}
+                            style={{
+                              transform: `translate(${noPosition.x}px, ${noPosition.y}px)`,
+                            }}
+                            className="rounded-full border border-white/30 bg-white/5 px-6 py-2 md:px-8 md:py-3 text-xs md:text-sm font-semibold uppercase tracking-[0.2em] text-white/80 transition duration-200"
+                          >
+                            {noButtonLabels[noLabelIndex]}
+                          </button>
+                        </div>
+
+                        <div className="w-full max-w-xs rounded-2xl border border-white/30 bg-white/10 px-4 py-4 text-sm text-white/90 shadow-[0_12px_30px_rgba(0,0,0,0.25)]">
+                          <p className="mt-1 text-base text-white/95">
+                            {pleaMessage}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="relative mt-10 flex flex-col items-center">
+                        <div
+                          className="cat-wrap transition-transform duration-300"
+                          style={{
+                            transform: `translate(${catOffset.x}px, ${catOffset.y}px)`,
+                          }}
+                        >
+                          <div className="h-36 w-44 md:h-48 md:w-56 transform scale-110 md:scale-125 drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)]">
+                            <DotLottiePlayer
+                              src="/cat.lottie"
+                              autoplay
+                              loop
+                              style={{ width: "100%", height: "100%" }}
+                            />
+                          </div>
+                        </div>
+
+                        <p className="mt-6 text-xs uppercase tracking-[0.3em] text-white/50 text-center">
+                          {answer === "yes"
+                            ? "I love you. Thanks for being my Valentine."
+                            : "Watching every move..."}
+                        </p>
+                      </div>
+                    </section>
+
+                    {/* Bottom spacer */}
+                    <div className="h-20" />
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center p-10 md:p-16 h-full text-center">
+                  <h2 className="text-3xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-pink-300 via-rose-400 to-pink-300 bg-clip-text text-transparent mb-6 md:mb-10 animate-pulse">
+                    You already said yes darling 🤍
+                  </h2>
+                  <p className="text-xl md:text-2xl lg:text-3xl text-white/90 mb-8 md:mb-12">
+                    I love you forever.
+                  </p>
+                  <div className="w-full max-w-md lg:max-w-xl">
+                    <Lottie
+                      animationData={romanticAnimation}
+                      loop
+                      className="w-full h-64 md:h-80 lg:h-96"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Already answered message */}
+        {sent && stage === "accepted" && (
+          <div className="fixed top-8 md:top-12 left-1/2 transform -translate-x-1/2 z-40 pointer-events-none">
+            <div className="inline-block bg-black/60 backdrop-blur-xl px-6 py-4 rounded-2xl border border-rose-400/30 shadow-2xl">
+              <p className="text-white text-lg md:text-xl font-medium">
+                You already said yes darling, I love you! 🤍
+              </p>
             </div>
           </div>
         )}
